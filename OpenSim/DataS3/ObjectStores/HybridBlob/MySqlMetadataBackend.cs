@@ -38,10 +38,12 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
         }
 
         /// <inheritdoc />
-        public async Task InitializeSchemaAsync(CancellationToken cancellationToken = default)
+        public Task InitializeSchemaAsync(CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (_initialized)
-                return;
+                return Task.CompletedTask;
 
             lock (_initSync)
             {
@@ -87,6 +89,8 @@ CREATE TABLE IF NOT EXISTS {_tableName} (
                         $"Failed to initialize MySQL schema for table '{_tableName}'", ex);
                 }
             }
+
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc />

@@ -38,10 +38,12 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
         }
 
         /// <inheritdoc />
-        public async Task InitializeSchemaAsync(CancellationToken cancellationToken = default)
+        public Task InitializeSchemaAsync(CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (_initialized)
-                return;
+                return Task.CompletedTask;
 
             lock (_initSync)
             {
@@ -91,6 +93,8 @@ COMMENT ON COLUMN {_tableName}.custom_metadata IS 'JSON serialized metadata';
                         $"Failed to initialize PostgreSQL schema for table '{_tableName}'", ex);
                 }
             }
+
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc />
