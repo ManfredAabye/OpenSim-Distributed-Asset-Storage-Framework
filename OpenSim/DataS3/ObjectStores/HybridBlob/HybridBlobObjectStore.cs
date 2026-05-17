@@ -29,7 +29,8 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
         /// Connection string keys:
         /// - HybridBlobStoragePath: root directory for blob storage (default: ./data/hybrid_blobs)
         /// - HybridBlobDatabaseType: metadata database type - SQLite, MySQL, MariaDB, PostgreSQL (default: SQLite)
-        /// - HybridBlobConnectionString: database-specific connection string (default: uses StoragePath)
+        /// - HybridBlobConnectionString: database-specific connection string
+        /// - ConnectionString: fallback to OpenSim/global DB connection string
         /// - HybridBlobTableName: metadata table name (default: blob_metadata)
         /// - HybridBlobAutoCreatePath: create directories if missing (default: true)
         /// 
@@ -47,22 +48,7 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
             _tableName = settings.GetValueOrDefault("HybridBlobTableName");
             _autoCreatePath = bool.TryParse(settings.GetValueOrDefault("HybridBlobAutoCreatePath"), out var val) ? val : true;
 
-            // Default connection string based on database type
-            if (settings.TryGetValue("HybridBlobConnectionString", out var explicitConnStr))
-            {
-                _connectionString = explicitConnStr;
-            }
-            else
-            {
-                // Auto-generate based on type
-                _connectionString = _databaseType.ToLowerInvariant() switch
-                {
-                    "sqlite" => Path.Combine(_storagePath, "metadata.db"),
-                    "mysql" or "mariadb" => "Server=localhost;Database=opensim;Uid=opensim;Pwd=password;Allow Zero DateTime=true;",
-                    "postgresql" or "postgres" => "Host=localhost;Database=opensim;Username=opensim;Password=password;",
-                    _ => throw new InvalidOperationException($"Unsupported database type: {_databaseType}")
-                };
-            }
+            _connectionString = ResolveMetadataConnectionString(connectionString, settings, _databaseType, _storagePath);
         }
 
         /// <summary>
@@ -298,6 +284,109 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Resolves metadata DB connection string with precedence:
+        /// 1) HybridBlobConnectionString
+        /// 2) OpenSim/global ConnectionString
+        /// 3) Database-type defaults
+        ///
+        /// Also reconstructs common DB tokens when values were split by simple ';' parsing.
+        /// </summary>
+        private static string ResolveMetadataConnectionString(
+            string? rawInput,
+            IReadOnlyDictionary<string, string> settings,
+            string databaseType,
+            string storagePath)
+        {
+            string? baseConn = null;
+
+            // If OpenSim provides a plain DB connection string directly,
+            // use it as-is (no HybridBlob* keys present).
+            if (!string.IsNullOrWhiteSpace(rawInput)
+                && rawInput.IndexOf("HybridBlob", StringComparison.OrdinalIgnoreCase) < 0
+                && LooksLikeDirectDbConnectionString(rawInput))
+            {
+                return rawInput.Trim();
+            }
+
+            if (settings.TryGetValue("HybridBlobConnectionString", out var hybridConn)
+                && !string.IsNullOrWhiteSpace(hybridConn))
+            {
+                baseConn = hybridConn;
+            }
+            else if (settings.TryGetValue("ConnectionString", out var openSimConn)
+                && !string.IsNullOrWhiteSpace(openSimConn))
+            {
+                baseConn = openSimConn;
+            }
+
+            if (!string.IsNullOrWhiteSpace(baseConn))
+                return AppendKnownDbSegments(baseConn, settings);
+
+            return databaseType.ToLowerInvariant() switch
+            {
+                "sqlite" => Path.Combine(storagePath, "metadata.db"),
+                "mysql" or "mariadb" => "Server=localhost;Database=opensim;Uid=opensim;Pwd=password;Allow Zero DateTime=true;",
+                "postgresql" or "postgres" => "Host=localhost;Database=opensim;Username=opensim;Password=password;",
+                _ => throw new InvalidOperationException($"Unsupported database type: {databaseType}")
+            };
+        }
+
+        private static string AppendKnownDbSegments(string baseConn, IReadOnlyDictionary<string, string> settings)
+        {
+            var knownKeys = new[]
+            {
+                "Server",
+                "Host",
+                "Port",
+                "Database",
+                "Uid",
+                "User Id",
+                "Username",
+                "Pwd",
+                "Password",
+                "Data Source",
+                "Initial Catalog",
+                "Integrated Security",
+                "SslMode",
+                "sslmode",
+                "Allow Zero DateTime",
+                "Pooling",
+                "Min Pool Size",
+                "Max Pool Size",
+                "Timeout",
+                "Command Timeout",
+                "Old Guids",
+                "Version"
+            };
+
+            var normalized = baseConn.Trim();
+            if (!normalized.EndsWith(";", StringComparison.Ordinal))
+                normalized += ";";
+
+            foreach (var key in knownKeys)
+            {
+                if (!settings.TryGetValue(key, out var value) || string.IsNullOrWhiteSpace(value))
+                    continue;
+
+                if (normalized.IndexOf(key + "=", StringComparison.OrdinalIgnoreCase) >= 0)
+                    continue;
+
+                normalized += key + "=" + value + ";";
+            }
+
+            return normalized;
+        }
+
+        private static bool LooksLikeDirectDbConnectionString(string value)
+        {
+            return value.IndexOf("Server=", StringComparison.OrdinalIgnoreCase) >= 0
+                || value.IndexOf("Host=", StringComparison.OrdinalIgnoreCase) >= 0
+                || value.IndexOf("Data Source=", StringComparison.OrdinalIgnoreCase) >= 0
+                || value.IndexOf("Initial Catalog=", StringComparison.OrdinalIgnoreCase) >= 0
+                || value.IndexOf("Database=", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         /// <summary>
