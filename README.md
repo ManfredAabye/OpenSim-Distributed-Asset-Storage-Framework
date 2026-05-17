@@ -1,6 +1,7 @@
 # OpenSim DataS3 MinIO Integration
 
-Versuchsreihe 1 - MinIO mit den Batch/Shell Skripten herunterladen Verzeichnis /bin/minio
+- Versuchsreihe 1 - MinIO mit den Batch/Shell Skripten herunterladen Verzeichnis /bin/minio
+- Versuchsreihe 2 - HybridBlobObjectStore
 
 ⚠️ Early status for experimentation. ⚡
 
