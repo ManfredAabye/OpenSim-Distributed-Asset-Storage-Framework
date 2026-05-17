@@ -60,7 +60,7 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
                         {
                             cmd.CommandText = $@"
 CREATE TABLE IF NOT EXISTS {_tableName} (
-    `key` VARCHAR(36) NOT NULL PRIMARY KEY COMMENT 'Blob UUID',
+    `key` VARCHAR(191) NOT NULL PRIMARY KEY COMMENT 'Blob storage key',
     `etag` VARCHAR(67) NOT NULL COMMENT 'SHA-256 hash in quotes',
     `size_bytes` BIGINT NOT NULL COMMENT 'Size in bytes',
     `content_type` VARCHAR(255) NOT NULL DEFAULT 'application/octet-stream',
@@ -75,6 +75,14 @@ CREATE TABLE IF NOT EXISTS {_tableName} (
   COLLATE=utf8mb4_unicode_ci
   ROW_FORMAT=COMPRESSED
   COMMENT='HybridBlobObjectStore metadata storage';
+";
+                            cmd.ExecuteNonQuery();
+
+                            // Existing installations may already have key as VARCHAR(36).
+                            // Ensure schema can store DataS3 storage keys (e.g. type-0/ab/cd/<sha256>).
+                            cmd.CommandText = $@"
+ALTER TABLE {_tableName}
+    MODIFY COLUMN `key` VARCHAR(191) NOT NULL COMMENT 'Blob storage key';
 ";
                             cmd.ExecuteNonQuery();
                         }
