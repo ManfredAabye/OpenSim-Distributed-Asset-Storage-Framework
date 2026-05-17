@@ -1,41 +1,93 @@
-; Beispiel-Konfiguration für Umstieg von Data auf DataS3
+; Beispiel-Konfiguration für Umstieg von Data auf DataS3.
+; Ziel: ein robuster Standardfall, plus getrennte Beispiele für jede Variante.
 
 [AssetService]
 LocalServiceModule = "OpenSim.Services.AssetServiceS3.dll:AssetServiceS3"
 
 [AssetStorage]
-ObjectStore = MinIO
-MinioAutoStart = true
-MinioBinaryPath = /opt/robust/bin/minio/linux-x64/minio
-MinioDataPath = /opt/robust/bin/minio/data
-MinioPort = 10080
-MinioEndpoint = http://127.0.0.1:10080
-MinioBucket = assets
-MinioAccessKey = minioadmin
-MinioSecretKey = minioadmin
-MinioRegion = us-east-1
-MinioAutoCreateBucket = true
+; -----------------------------------------------------------------------------
+; Standard: HybridBlob + SQLite
+; Diese Variante ist am robustesten, weil kein externer DB-Server nötig ist.
+; Blobs werden in 2-GB-Gruppen geschrieben, die Metadaten liegen lokal in SQLite.
+; -----------------------------------------------------------------------------
+ObjectStore = HybridBlob
+HybridBlobStoragePath = ./data/hybrid_blobs
+HybridBlobDatabaseType = SQLite
+HybridBlobConnectionString = ./data/hybrid_blobs/metadata.db
+HybridBlobTableName = blob_metadata
+HybridBlobAutoCreatePath = true
+HybridBlobGroupSizeBytes = 2147483648
+
+; Fallback aktiv: Reads dürfen noch auf das alte System zurückfallen.
+; ReadThroughMigrationEnabled kann fehlende Daten beim Zugriff nachziehen.
 FallbackReadEnabled = true
 ReadThroughMigrationEnabled = true
 
-; Alternative: HybridBlob (Filesystem + SQL-Metadaten)
+; -----------------------------------------------------------------------------
+; Beispiel 1: MinIO statt HybridBlob
+; Geeignet, wenn du S3-kompatiblen Objektspeicher statt lokaler Pack-Dateien willst.
+; -----------------------------------------------------------------------------
+;ObjectStore = MinIO
+;MinioAutoStart = true
+;MinioBinaryPath = /opt/robust/bin/minio/linux-x64/minio
+;MinioDataPath = /opt/robust/bin/minio/data
+;MinioPort = 10080
+;MinioEndpoint = http://127.0.0.1:10080
+;MinioBucket = assets
+;MinioAccessKey = minioadmin
+;MinioSecretKey = minioadmin
+;MinioRegion = us-east-1
+;MinioAutoCreateBucket = true
+
+; -----------------------------------------------------------------------------
+; Beispiel 2: HybridBlob + SQLite mit anderem Pfad
+; Der ConnectionString ist hier ein Dateipfad zur SQLite-Metadatenbank.
+; -----------------------------------------------------------------------------
 ;ObjectStore = HybridBlob
-;HybridBlobStoragePath = ./data/hybrid_blobs
+;HybridBlobStoragePath = /opt/robust/bin/data/hybrid_blobs
 ;HybridBlobDatabaseType = SQLite
-;HybridBlobConnectionString = ./data/hybrid_blobs/metadata.db
+;HybridBlobConnectionString = /opt/robust/bin/data/hybrid_blobs/metadata.db
 ;HybridBlobTableName = blob_metadata
 ;HybridBlobAutoCreatePath = true
-; Optional: OpenSim-ConnectionString wiederverwenden
-;HybridBlobConnectionString = <gleicher Wert wie dein OpenSim ConnectionString>
+;HybridBlobGroupSizeBytes = 2147483648
 
-; MySQL/MariaDB Beispiel:
+; -----------------------------------------------------------------------------
+; Beispiel 3: HybridBlob + MySQL/MariaDB
+; Der ConnectionString muss auf den DB-Server zeigen, nicht auf eine Datei.
+; -----------------------------------------------------------------------------
+;ObjectStore = HybridBlob
 ;HybridBlobDatabaseType = MySQL
 ;HybridBlobConnectionString = Server=127.0.0.1;Port=3306;Database=opensim;Uid=opensim;Pwd=change-me;Allow Zero DateTime=true;
+;HybridBlobTableName = blob_metadata
+;HybridBlobStoragePath = /opt/robust/bin/data/hybrid_blobs
+;HybridBlobAutoCreatePath = true
+;HybridBlobGroupSizeBytes = 2147483648
 
-; PostgreSQL Beispiel:
+; -----------------------------------------------------------------------------
+; Beispiel 4: HybridBlob + PostgreSQL
+; Der ConnectionString muss auf den DB-Server zeigen, nicht auf eine Datei.
+; -----------------------------------------------------------------------------
+;ObjectStore = HybridBlob
 ;HybridBlobDatabaseType = PostgreSQL
 ;HybridBlobConnectionString = Host=127.0.0.1;Port=5432;Database=opensim;Username=opensim;Password=change-me;sslmode=prefer;
+;HybridBlobTableName = blob_metadata
+;HybridBlobStoragePath = /opt/robust/bin/data/hybrid_blobs
+;HybridBlobAutoCreatePath = true
+;HybridBlobGroupSizeBytes = 2147483648
 
-; Nach erfolgreicher Migration:
+; -----------------------------------------------------------------------------
+; Beispiel 5: HybridBlob mit OpenSim-ConnectionString wiederverwenden
+; Praktisch, wenn dein globaler OpenSim-DB-String schon korrekt gepflegt ist.
+; -----------------------------------------------------------------------------
+;HybridBlobConnectionString = <gleicher Wert wie dein OpenSim ConnectionString>
+;HybridBlobDatabaseType = MySQL
+;HybridBlobTableName = blob_metadata
+;HybridBlobStoragePath = /opt/robust/bin/data/hybrid_blobs
+;HybridBlobAutoCreatePath = true
+;HybridBlobGroupSizeBytes = 536870912
+
+; -----------------------------------------------------------------------------
+; Beispiel 6: Nach erfolgreicher Migration Fallback abschalten
+; -----------------------------------------------------------------------------
 ;FallbackReadEnabled = false
 ;ReadThroughMigrationEnabled = false
