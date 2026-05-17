@@ -91,6 +91,21 @@ namespace OpenSim.Services.AssetServiceS3.Utils
                     objectStore = "HybridBlob";
             }
 
+            // Fallback: when HybridBlobConnectionString is still not set, use the global OpenSim
+            // database connection from [DatabaseService] or [AccessControl] so that operators do
+            // not need to duplicate their credentials.
+            if (objectStore.Equals("HybridBlob", StringComparison.OrdinalIgnoreCase)
+                && !HasConnectionKey(connection, "HybridBlobConnectionString"))
+            {
+                IConfig dbService = source.Configs["DatabaseService"];
+                IConfig accessControl = source.Configs["AccessControl"];
+                string? globalDbConn = dbService?.GetString("ConnectionString", null);
+                if (string.IsNullOrWhiteSpace(globalDbConn))
+                    globalDbConn = accessControl?.GetString("ConnectionString", null);
+                if (!string.IsNullOrWhiteSpace(globalDbConn))
+                    connection = UpsertConnectionToken(connection, "HybridBlobConnectionString", globalDbConn!);
+            }
+
             return new AssetServiceS3Options
             {
                 ObjectStore = objectStore,
