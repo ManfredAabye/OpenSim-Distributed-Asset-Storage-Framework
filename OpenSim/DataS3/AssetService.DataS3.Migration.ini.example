@@ -1,0 +1,23 @@
+; Beispiel-Konfiguration für Umstieg von Data auf DataS3
+
+[AssetService]
+LocalServiceModule = "OpenSim.Services.AssetServiceS3.dll:AssetServiceS3"
+
+[AssetStorage]
+ObjectStore = MinIO
+MinioAutoStart = true
+MinioBinaryPath = /opt/robust/bin/minio/linux-x64/minio
+MinioDataPath = /opt/robust/bin/minio/data
+MinioPort = 10080
+MinioEndpoint = http://127.0.0.1:10080
+MinioBucket = assets
+MinioAccessKey = minioadmin
+MinioSecretKey = minioadmin
+MinioRegion = us-east-1
+MinioAutoCreateBucket = true
+FallbackReadEnabled = true
+ReadThroughMigrationEnabled = true
+
+; Nach erfolgreicher Migration:
+;FallbackReadEnabled = false
+;ReadThroughMigrationEnabled = false

@@ -1,0 +1,370 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <PreserveCompilationContext>false</PreserveCompilationContext>
+    <OutputType>Library</OutputType>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>OpenSim.MinIO</AssemblyName>
+    <Deterministic>true</Deterministic>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
+    <EnableDefaultItems>false</EnableDefaultItems>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>TRACE</DefineConstants>
+    <DocumentationFile></DocumentationFile>
+    <DebugSymbols>True</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <Optimize>False</Optimize>
+    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
+    <UseCommonOutputDirectory>True</UseCommonOutputDirectory>
+    <AppendTargetFrameworkToOutputPath>False</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>False</AppendRuntimeIdentifierToOutputPath>
+    <OutputPath>..\..\..\bin\</OutputPath>
+    <RegisterForComInterop>False</RegisterForComInterop>
+    <RemoveIntegerChecks>False</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <NoStdLib>False</NoStdLib>
+    <NoWarn>CA1416,SYSLIB0011,SYSLIB0014,SYSLIB0039</NoWarn>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants></DefineConstants>
+    <DocumentationFile></DocumentationFile>
+    <DebugSymbols>False</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <Optimize>True</Optimize>
+    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
+    <UseCommonOutputDirectory>True</UseCommonOutputDirectory>
+    <AppendTargetFrameworkToOutputPath>False</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>False</AppendRuntimeIdentifierToOutputPath>
+    <OutputPath>..\..\..\bin\</OutputPath>
+    <RegisterForComInterop>False</RegisterForComInterop>
+    <RemoveIntegerChecks>False</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <NoStdLib>False</NoStdLib>
+    <NoWarn>CA1416,SYSLIB0011,SYSLIB0014,SYSLIB0039</NoWarn>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="log4net" >
+      <Name>log4net</Name>
+      <HintPath>..\..\..\bin\log4net.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Nini" >
+      <Name>Nini</Name>
+      <HintPath>..\..\..\bin\Nini.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="OpenMetaverse" >
+      <Name>OpenMetaverse</Name>
+      <HintPath>..\..\..\bin\OpenMetaverse.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="OpenMetaverse.StructuredData" >
+      <Name>OpenMetaverse.StructuredData</Name>
+      <HintPath>..\..\..\bin\OpenMetaverse.StructuredData.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="OpenMetaverseTypes" >
+      <Name>OpenMetaverseTypes</Name>
+      <HintPath>..\..\..\bin\OpenMetaverseTypes.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Framework\OpenSim.Framework.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="ClientOptions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GlobalUsings.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="IMinioClient.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="IRequestAuthenticator.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ITimeProvider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MinioClientBuilder.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MinioClientExtensions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MinioException.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="MinioHttpException.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ObjectItem.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\AccessTokenProvider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\Credentials.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\EnvironmentAccessTokenProvider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\EnvironmentAccessTokenProviderOptions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\EnvironmentCredentialsProvider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\FileAccessTokenProvider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\FileAccessTokenProviderOptions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\ICredentialsProvider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\KeycloakAccessTokenProvider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\KeycloakAccessTokenProviderOptions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\StaticAccessTokenProvider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\StaticAccessTokenProviderOptions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\StaticCredentialsOptions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\StaticCredentialsProvider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\WebIdentityCredentialsOptions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="CredentialProviders\WebIdentityCredentialsProvider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\BaseStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\ByteExtensions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\LoggingShim.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\HttpClientFactoryShim.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\HttpHeadersExtensions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\HttpResponseMessageExtensions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\IsoTimestampExtensions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\JsonCollectionItemConverter.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\NanoSecTimeSpanJsonConverter.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\Net6Shims.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\ObjectInfoStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\OptionsShim.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\ProgressReadStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\QueryParams.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\SecTimeSpanJsonConverter.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\ServiceCollectionExtensions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\VerificationHelpers.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\XmlHelper.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Helpers\XmlHttpContent.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Implementation\MinioClient.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Implementation\TimeProvider.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Implementation\V4RequestAuthenticator.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\BucketEncryptionConfiguration.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\BucketInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\BucketNotification.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\ChecksumAlgorithm.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\CompleteMultipartUploadOptions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\CompleteMultipartUploadResult.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\CopyObjectOptions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\CopyObjectResult.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\CreateMultipartUploadOptions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\CreateMultipartUploadResult.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\DeleteResult.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\ErrorResponse.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\GetObjectOptions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\IServerSideEncryption.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\KeyAndVersion.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\LegalHoldStatus.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\LifecycleConfiguration.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\ObjectIdentifier.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\ObjectInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\ObjectLockConfiguration.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\ObjectRetention.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\PartInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\PostPolicyCondition.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\PostPolicyResult.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\PutObjectOptions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\ReplicationConfiguration.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\Restore.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\RetentionMode.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\RetentionRule.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\S3Range.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\SelectObjectOptions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\SSE.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\UploadPartOptions.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\UploadPartResult.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\VersioningConfiguration.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\VersioningStatus.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\Notification\BucketMeta.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\Notification\BucketNotificationEvent.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\Notification\EventMeta.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\Notification\Identity.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\Notification\NotificationEvent.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\Notification\ObjectMeta.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Model\Notification\SourceInfo.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+</Project>

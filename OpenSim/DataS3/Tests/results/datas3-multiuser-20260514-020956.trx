@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="c557ac7f-ca6a-47f2-804a-a77a82ee9458" name="zainh@MHPC-WORKSTATIO 2026-05-14 02:09:58" runUser="MHPC-WORKSTATIO\zainh" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-05-14T02:09:58.5576068+02:00" queuing="2026-05-14T02:09:58.5576072+02:00" start="2026-05-14T02:09:58.2073301+02:00" finish="2026-05-14T02:09:58.5580179+02:00" />
+  <TestSettings name="default" id="445be089-583f-4cb8-9ca0-9e4a8f05127f">
+    <Deployment runDeploymentRoot="zainh_MHPC-WORKSTATIO_2026-05-14_02_09_58" />
+  </TestSettings>
+  <TestLists>
+    <TestList name="Ergebnisse nicht in einer Liste" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Alle geladenen Ergebnisse" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="0" executed="0" passed="0" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>Unhandled exception. System.IO.FileNotFoundException: Could not load file or assembly 'Microsoft.TestPlatform.CoreUtilities, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'. Das System kann die angegebene Datei nicht finden.&#xD;
+File name: 'Microsoft.TestPlatform.CoreUtilities, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'&#xD;
+   at Microsoft.VisualStudio.TestPlatform.TestHost.Program.Main(String[] args)&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="MHPC-WORKSTATIO" outcome="Error" timestamp="2026-05-14T02:09:58.5334941+02:00">
+        <Text>Der TestHost-Prozess für die Quelle(n) D:\OpenSim-Data\opensim\bin\OpenSim.DataS3.Tests.dll wurde mit folgendem Fehler beendet: Unhandled exception. System.IO.FileNotFoundException: Could not load file or assembly 'Microsoft.TestPlatform.CoreUtilities, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'. Das System kann die angegebene Datei nicht finden.&#xD;
+File name: 'Microsoft.TestPlatform.CoreUtilities, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'&#xD;
+   at Microsoft.VisualStudio.TestPlatform.TestHost.Program.Main(String[] args)&#xD;
+. Weitere Informationen finden Sie in den Diagnoseprotokollen.</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

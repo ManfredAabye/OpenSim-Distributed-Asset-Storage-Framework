@@ -1,0 +1,91 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <OutputPath>..\..\..\bin\</OutputPath>
+    <BaseIntermediateOutputPath>..\..\..\obj\OpenSim.DataS3.Tests\</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>..\..\..\obj\OpenSim.DataS3.Tests\$(Configuration)\</IntermediateOutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.8" />
+    <PackageReference Include="Minio" Version="6.0.3" />
+    <PackageReference Include="NUnit" Version="3.13.3" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="OpenSim.Framework">
+      <HintPath>..\..\..\bin\OpenSim.Framework.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="OpenSim.Framework.Servers">
+      <HintPath>..\..\..\bin\OpenSim.Framework.Servers.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="OpenSim.Framework.Servers.HttpServer">
+      <HintPath>..\..\..\bin\OpenSim.Framework.Servers.HttpServer.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="OpenMetaverse">
+      <HintPath>..\..\..\bin\OpenMetaverse.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="OpenMetaverseTypes">
+      <HintPath>..\..\..\bin\OpenMetaverseTypes.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="OpenMetaverse.StructuredData">
+      <HintPath>..\..\..\bin\OpenMetaverse.StructuredData.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="log4net">
+      <HintPath>..\..\..\bin\log4net.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenSim.DataS3.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="UploadRateLimiterMultiUserTests.cs" />
+    <Compile Include="HybridAssetDataProviderFailureTests.cs" />
+    <Compile Include="BackgroundAssetIntegrityVerifierTests.cs" />
+    <Compile Include="DataS3OperationalMetricsTests.cs" />
+    <Compile Include="DataS3AlertEvaluatorTests.cs" />
+    <Compile Include="DataS3DashboardTests.cs" />
+    <Compile Include="HybridAssetDataSecurityLimitsTests.cs" />
+    <Compile Include="HybridAssetDataCompatibilityTests.cs" />
+    <Compile Include="DataS3SmokeTests.cs" />
+    <Compile Include="..\..\Tests\Common\OpenSimTestCase.cs" Link="Common\OpenSimTestCase.cs" />
+    <Compile Include="..\..\Tests\Common\TestHelpers.cs" Link="Common\TestHelpers.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\smoke.migrations">
+      <LogicalName>OpenSim.DataS3.Tests.smoke.migrations</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <Target Name="RemoveNetVersionDirectories" AfterTargets="CopyFilesToOutputDirectory">
+    <ItemGroup>
+      <NetVersionDirectories Include="$(OutputPath)**\net8.0" />
+      <NetVersionDirectories Include="$(OutputPath)**\net9.0" />
+      <NetVersionDirectories Include="$(OutputPath)**\net10.0" />
+    </ItemGroup>
+    <PropertyGroup>
+      <BrowserWasmNet8Path>$(MSBuildProjectDirectory)\..\..\..\bin\runtimes\browser-wasm\nativeassets\net8.0</BrowserWasmNet8Path>
+    </PropertyGroup>
+    <RemoveDir Directories="@(NetVersionDirectories)" Condition="Exists('%(NetVersionDirectories.Identity)')" />
+    <RemoveDir Directories="$(BrowserWasmNet8Path)" Condition="Exists('$(BrowserWasmNet8Path)')" />
+  </Target>
+</Project>

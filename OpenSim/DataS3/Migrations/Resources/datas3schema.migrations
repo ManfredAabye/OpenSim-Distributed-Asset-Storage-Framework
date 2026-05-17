@@ -1,0 +1,12 @@
+:VERSION 1
+CREATE TABLE IF NOT EXISTS datas3_schema_probe(
+    id INTEGER PRIMARY KEY,
+    note TEXT NOT NULL
+);
+:GO
+INSERT INTO datas3_schema_probe(id, note) VALUES(1, 'v1');
+:GO
+
+:VERSION 2
+ALTER TABLE datas3_schema_probe ADD COLUMN updated_at TEXT NULL;
+:GO

@@ -1,0 +1,6 @@
+@{
+    TestModes = @(
+        "multiuser",
+        "failure"
+    )
+}

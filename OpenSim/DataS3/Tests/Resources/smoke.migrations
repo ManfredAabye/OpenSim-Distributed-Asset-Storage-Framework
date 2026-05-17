@@ -1,0 +1,8 @@
+:VERSION 1
+CREATE TABLE IF NOT EXISTS smoke_migration(
+    id INTEGER PRIMARY KEY,
+    note TEXT NOT NULL
+);
+:GO
+INSERT INTO smoke_migration(id, note) VALUES(1, 'ok');
+:GO

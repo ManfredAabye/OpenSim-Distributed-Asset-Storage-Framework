@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="7815ad3e-9f70-4be0-be4b-2b53ded9b225" name="zainh@MHPC-WORKSTATIO 2026-05-14 02:11:44" runUser="MHPC-WORKSTATIO\zainh" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-05-14T02:11:44.0282800+02:00" queuing="2026-05-14T02:11:44.0282802+02:00" start="2026-05-14T02:11:43.6170417+02:00" finish="2026-05-14T02:11:44.0286090+02:00" />
+  <TestSettings name="default" id="c43ec86b-6812-4cc3-80cf-216beb3720cd">
+    <Deployment runDeploymentRoot="zainh_MHPC-WORKSTATIO_2026-05-14_02_11_44" />
+  </TestSettings>
+  <TestLists>
+    <TestList name="Ergebnisse nicht in einer Liste" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Alle geladenen Ergebnisse" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="0" executed="0" passed="0" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started&#xD;
+Running selected tests in D:\OpenSim-Data\opensim\OpenSim\DataS3\Tests\bin\Release\net8.0\OpenSim.DataS3.Tests.dll&#xD;
+   NUnit failed to load D:\OpenSim-Data\opensim\OpenSim\DataS3\Tests\bin\Release\net8.0\OpenSim.DataS3.Tests.dll&#xD;
+NUnit Adapter 4.6.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="MHPC-WORKSTATIO" outcome="Warning" timestamp="2026-05-14T02:11:43.9790128+02:00">
+        <Text>Kein Test entspricht dem angegebenen Testfallfilter "FullyQualifiedName~OpenSim.DataS3.Tests.UploadRateLimiterMultiUserTests" in "D:\OpenSim-Data\opensim\OpenSim\DataS3\Tests\bin\Release\net8.0\OpenSim.DataS3.Tests.dll".</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

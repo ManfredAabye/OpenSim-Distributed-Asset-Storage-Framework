@@ -1,0 +1,16 @@
+{
+  "TimestampUtc": "2026-05-13T23:55:13.5604290Z",
+  "RepoRoot": "D:\\OpenSim-Data\\opensim",
+  "NUnitConsoleResolved": "",
+  "NUnitConsoleFound": false,
+  "AssembliesFound": 0,
+  "Assemblies": [],
+  "ReadyForExecution": false,
+  "AttemptBuild": {
+    "IsPresent": true
+  },
+  "BuildConfiguration": "Release",
+  "WhatIfMode": {
+    "IsPresent": true
+  }
+}
