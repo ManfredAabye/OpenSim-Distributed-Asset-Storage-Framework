@@ -23,6 +23,7 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
         private IMetadataBackend? _metadataBackend;
         private readonly object _initSync = new object();
         private bool _initialized;
+        private Exception? _initializationException;
         private bool _disposed;
 
         /// <summary>
@@ -59,10 +60,20 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
             if (_initialized)
                 return;
 
+            if (_initializationException != null)
+                throw new InvalidOperationException(
+                    $"HybridBlobObjectStore (Type: {_databaseType}, Path: {_storagePath}) failed to initialize earlier. Fix the database connection configuration and restart.",
+                    _initializationException);
+
             lock (_initSync)
             {
                 if (_initialized)
                     return;
+
+                if (_initializationException != null)
+                    throw new InvalidOperationException(
+                        $"HybridBlobObjectStore (Type: {_databaseType}, Path: {_storagePath}) failed to initialize earlier. Fix the database connection configuration and restart.",
+                        _initializationException);
 
                 try
                 {
@@ -83,6 +94,9 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
                 }
                 catch (Exception ex)
                 {
+                    _initializationException = ex;
+                    _metadataBackend?.Dispose();
+                    _metadataBackend = null;
                     throw new InvalidOperationException(
                         $"Failed to initialize HybridBlobObjectStore (Type: {_databaseType}, Path: {_storagePath})", ex);
                 }
@@ -300,31 +314,30 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
             string databaseType,
             string storagePath)
         {
-            string? baseConn = null;
-
-            // If OpenSim provides a plain DB connection string directly,
-            // use it as-is (no HybridBlob* keys present).
-            if (!string.IsNullOrWhiteSpace(rawInput)
-                && rawInput.IndexOf("HybridBlob", StringComparison.OrdinalIgnoreCase) < 0
-                && LooksLikeDirectDbConnectionString(rawInput))
-            {
-                return rawInput.Trim();
-            }
-
+            // 1) Explicit HybridBlobConnectionString has highest precedence.
             if (settings.TryGetValue("HybridBlobConnectionString", out var hybridConn)
                 && !string.IsNullOrWhiteSpace(hybridConn))
-            {
-                baseConn = hybridConn;
-            }
-            else if (settings.TryGetValue("ConnectionString", out var openSimConn)
-                && !string.IsNullOrWhiteSpace(openSimConn))
-            {
-                baseConn = openSimConn;
-            }
+                return AppendKnownDbSegments(hybridConn, settings);
 
-            if (!string.IsNullOrWhiteSpace(baseConn))
-                return AppendKnownDbSegments(baseConn, settings);
+            // 2) Full ConnectionString key that looks like a DB connection string.
+            if (settings.TryGetValue("ConnectionString", out var openSimConn)
+                && !string.IsNullOrWhiteSpace(openSimConn)
+                && LooksLikeDirectDbConnectionString(openSimConn))
+                return AppendKnownDbSegments(openSimConn, settings);
 
+            // 3) Reconstruct from individual DB tokens that were parsed out of the OpenSim
+            //    connection string (e.g. Data Source=, Database=, Password=, User ID=, ...).
+            //    This covers the common case where [AssetService]/[DatabaseService].ConnectionString
+            //    was merged into the provider connection string without an explicit HybridBlob* prefix.
+            string? reconstructed = TryReconstructDbConnectionFromTokens(settings);
+            if (!string.IsNullOrWhiteSpace(reconstructed))
+                return reconstructed!;
+
+            // 4) Raw input without HybridBlob keys that looks like a direct DB connection string.
+            if (!string.IsNullOrWhiteSpace(rawInput) && LooksLikeDirectDbConnectionString(rawInput))
+                return rawInput.Trim();
+
+            // 5) Database-type defaults (last resort — should never be reached in a configured system).
             return databaseType.ToLowerInvariant() switch
             {
                 "sqlite" => Path.Combine(storagePath, "metadata.db"),
@@ -332,6 +345,84 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
                 "postgresql" or "postgres" => "Host=localhost;Database=opensim;Username=opensim;Password=password;",
                 _ => throw new InvalidOperationException($"Unsupported database type: {databaseType}")
             };
+        }
+
+        /// <summary>
+        /// Attempts to reconstruct a usable DB connection string from individual parsed tokens
+        /// (e.g. after OpenSim's raw ConnectionString has been split on ';' into a settings dict).
+        /// Returns null when not enough information is present.
+        /// </summary>
+        private static string? TryReconstructDbConnectionFromTokens(IReadOnlyDictionary<string, string> settings)
+        {
+            string? database = GetFirstTokenValue(settings, "Database");
+            string? password  = GetFirstTokenValue(settings, "Password", "Pwd");
+            if (string.IsNullOrWhiteSpace(database) || string.IsNullOrWhiteSpace(password))
+                return null;
+
+            var sb = new System.Text.StringBuilder();
+
+            // MySQL / SQLite via "Data Source=" (OpenSim default for MySQL)
+            string? dataSource = GetFirstTokenValue(settings, "Data Source");
+            if (dataSource != null)
+            {
+                string? userId = GetFirstTokenValue(settings, "User ID", "User Id", "Uid", "Username");
+                sb.Append("Data Source=").Append(dataSource).Append(';');
+                sb.Append("Database=").Append(database).Append(';');
+                if (userId != null) sb.Append("User ID=").Append(userId).Append(';');
+                sb.Append("Password=").Append(password).Append(';');
+                AppendTokenIfPresent(sb, settings, "Old Guids");
+                AppendTokenIfPresent(sb, settings, "SslMode");
+                AppendTokenIfPresent(sb, settings, "Allow Zero DateTime");
+                AppendTokenIfPresent(sb, settings, "Pooling");
+                AppendTokenIfPresent(sb, settings, "Port");
+                return sb.ToString();
+            }
+
+            // MySQL / MariaDB via "Server="
+            string? server = GetFirstTokenValue(settings, "Server");
+            if (server != null)
+            {
+                string? userId = GetFirstTokenValue(settings, "Uid", "User Id", "User ID", "Username");
+                sb.Append("Server=").Append(server).Append(';');
+                sb.Append("Database=").Append(database).Append(';');
+                if (userId != null) sb.Append("Uid=").Append(userId).Append(';');
+                sb.Append("Pwd=").Append(password).Append(';');
+                AppendTokenIfPresent(sb, settings, "SslMode");
+                AppendTokenIfPresent(sb, settings, "Allow Zero DateTime");
+                AppendTokenIfPresent(sb, settings, "Old Guids");
+                AppendTokenIfPresent(sb, settings, "Port");
+                return sb.ToString();
+            }
+
+            // PostgreSQL via "Host="
+            string? host = GetFirstTokenValue(settings, "Host");
+            if (host != null)
+            {
+                string? username = GetFirstTokenValue(settings, "Username", "User ID", "User Id", "Uid");
+                sb.Append("Host=").Append(host).Append(';');
+                sb.Append("Database=").Append(database).Append(';');
+                if (username != null) sb.Append("Username=").Append(username).Append(';');
+                sb.Append("Password=").Append(password).Append(';');
+                AppendTokenIfPresent(sb, settings, "Port");
+                AppendTokenIfPresent(sb, settings, "SslMode");
+                return sb.ToString();
+            }
+
+            return null;
+        }
+
+        private static string? GetFirstTokenValue(IReadOnlyDictionary<string, string> settings, params string[] keys)
+        {
+            foreach (string key in keys)
+                if (settings.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v))
+                    return v;
+            return null;
+        }
+
+        private static void AppendTokenIfPresent(System.Text.StringBuilder sb, IReadOnlyDictionary<string, string> settings, string key)
+        {
+            if (settings.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v))
+                sb.Append(key).Append('=').Append(v).Append(';');
         }
 
         private static string AppendKnownDbSegments(string baseConn, IReadOnlyDictionary<string, string> settings)
