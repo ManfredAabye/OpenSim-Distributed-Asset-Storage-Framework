@@ -69,13 +69,12 @@ CREATE TABLE IF NOT EXISTS {_tableName} (
     `custom_metadata` LONGTEXT NULL COMMENT 'JSON serialized metadata',
     
     INDEX idx_modified_utc (`modified_utc`),
-    INDEX idx_content_type (`content_type`),
-    
-    ENGINE=InnoDB,
-    DEFAULT CHARSET=utf8mb4,
-    COLLATE=utf8mb4_unicode_ci,
-    ROW_FORMAT=COMPRESSED
-) COMMENT='HybridBlobObjectStore metadata storage';
+    INDEX idx_content_type (`content_type`)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci
+  ROW_FORMAT=COMPRESSED
+  COMMENT='HybridBlobObjectStore metadata storage';
 ";
                             cmd.ExecuteNonQuery();
                         }
