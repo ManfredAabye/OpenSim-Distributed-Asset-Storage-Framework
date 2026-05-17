@@ -48,7 +48,7 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
             lock (_initSync)
             {
                 if (_initialized)
-                    return;
+                    return Task.CompletedTask;
 
                 try
                 {
