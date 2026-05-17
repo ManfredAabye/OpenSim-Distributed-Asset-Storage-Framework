@@ -161,7 +161,7 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
             {
                 using (var sha256 = SHA256.Create())
                 {
-                    using (var hashStream = new CryptoStream(fs, sha256, CryptoStreamMode.Write))
+                    using (var hashStream = new CryptoStream(fs, sha256, CryptoStreamMode.Write, leaveOpen: true))
                     {
                         await data.CopyToAsync(hashStream, 81920, cancellationToken).ConfigureAwait(false);
                     }
