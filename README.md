@@ -116,3 +116,68 @@ Falls du MinIO bewusst als eigenen externen Dienst startest, setze in der INI `M
 
 - Prüfe nach dem Start das Log auf Zeilen wie `MinioEndpoint`, um zu sehen, ob die Werte übernommen wurden.
 - Bei Problemen: Pfade, Dateinamen und Includes kontrollieren.
+
+---
+
+# HybridBlobObjectStore
+
+HybridBlob speichert Blob-Daten im Dateisystem und Metadaten in einer SQL-Datenbank.
+
+## Unterstuetzte Datenbanken
+
+- SQLite
+- MySQL
+- MariaDB
+- PostgreSQL
+
+## Konfigurationsschluessel
+
+- `ObjectStore=HybridBlob`
+- `HybridBlobStoragePath` (Pfad fuer Blob-Dateien)
+- `HybridBlobDatabaseType` (`SQLite|MySQL|MariaDB|PostgreSQL`)
+- `HybridBlobConnectionString` (DB-Verbindungsstring)
+- `HybridBlobTableName` (optional, Standard: `blob_metadata`)
+- `HybridBlobAutoCreatePath` (`true|false`)
+
+## Beispiel: SQLite
+
+```ini
+[AssetStorage]
+ObjectStore = HybridBlob
+HybridBlobStoragePath = ./data/hybrid_blobs
+HybridBlobDatabaseType = SQLite
+HybridBlobConnectionString = ./data/hybrid_blobs/metadata.db
+HybridBlobTableName = blob_metadata
+HybridBlobAutoCreatePath = true
+```
+
+## Beispiel: MySQL/MariaDB
+
+```ini
+[AssetStorage]
+ObjectStore = HybridBlob
+HybridBlobStoragePath = ./data/hybrid_blobs
+HybridBlobDatabaseType = MySQL
+HybridBlobConnectionString = Server=127.0.0.1;Port=3306;Database=opensim;Uid=opensim;Pwd=change-me;Allow Zero DateTime=true;
+HybridBlobTableName = blob_metadata
+HybridBlobAutoCreatePath = true
+```
+
+## Beispiel: PostgreSQL
+
+```ini
+[AssetStorage]
+ObjectStore = HybridBlob
+HybridBlobStoragePath = ./data/hybrid_blobs
+HybridBlobDatabaseType = PostgreSQL
+HybridBlobConnectionString = Host=127.0.0.1;Port=5432;Database=opensim;Username=opensim;Password=change-me;sslmode=prefer;
+HybridBlobTableName = blob_metadata
+HybridBlobAutoCreatePath = true
+```
+
+## Hinweis zur Migrationsdatei
+
+Zusatzbeispiele sind auch in folgender Datei hinterlegt:
+
+- `OpenSim/DataS3/AssetService.DataS3.Migration.ini.example`
+
