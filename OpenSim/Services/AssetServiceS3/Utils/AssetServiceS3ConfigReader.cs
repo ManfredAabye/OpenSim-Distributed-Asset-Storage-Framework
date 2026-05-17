@@ -48,6 +48,7 @@ namespace OpenSim.Services.AssetServiceS3.Utils
                 connection = MergeStorageValue(connection, storage, "HybridBlobConnectionString");
                 connection = MergeStorageValue(connection, storage, "HybridBlobTableName");
                 connection = MergeStorageValue(connection, storage, "HybridBlobAutoCreatePath");
+                connection = MergeStorageValue(connection, storage, "HybridBlobGroupSizeBytes");
                 connection = MergeStorageValue(connection, storage, "MetadataProvider");
                 connection = MergeStorageValue(connection, storage, "MetadataConnectionString");
                 connection = MergeStorageValue(connection, storage, "CacheProvider");
@@ -86,6 +87,8 @@ namespace OpenSim.Services.AssetServiceS3.Utils
                 connection = UpsertStorageValue(connection, hybridBlob, "ConnectionString", "HybridBlobConnectionString");
                 connection = UpsertStorageValue(connection, hybridBlob, "TableName", "HybridBlobTableName");
                 connection = UpsertStorageValue(connection, hybridBlob, "AutoCreatePath", "HybridBlobAutoCreatePath");
+                connection = UpsertStorageValue(connection, hybridBlob, "GroupSizeBytes", "HybridBlobGroupSizeBytes");
+                connection = UpsertStorageValue(connection, hybridBlob, "HybridBlobGroupSizeBytes", "HybridBlobGroupSizeBytes");
 
                 if (hybridBlob.GetBoolean("Enabled", false) && !objectStore.Equals("HybridBlob", StringComparison.OrdinalIgnoreCase))
                     objectStore = "HybridBlob";
