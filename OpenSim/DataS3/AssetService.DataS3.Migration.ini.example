@@ -18,6 +18,24 @@ MinioAutoCreateBucket = true
 FallbackReadEnabled = true
 ReadThroughMigrationEnabled = true
 
+; Alternative: HybridBlob (Filesystem + SQL-Metadaten)
+;ObjectStore = HybridBlob
+;HybridBlobStoragePath = ./data/hybrid_blobs
+;HybridBlobDatabaseType = SQLite
+;HybridBlobConnectionString = ./data/hybrid_blobs/metadata.db
+;HybridBlobTableName = blob_metadata
+;HybridBlobAutoCreatePath = true
+; Optional: OpenSim-ConnectionString wiederverwenden
+;HybridBlobConnectionString = <gleicher Wert wie dein OpenSim ConnectionString>
+
+; MySQL/MariaDB Beispiel:
+;HybridBlobDatabaseType = MySQL
+;HybridBlobConnectionString = Server=127.0.0.1;Port=3306;Database=opensim;Uid=opensim;Pwd=change-me;Allow Zero DateTime=true;
+
+; PostgreSQL Beispiel:
+;HybridBlobDatabaseType = PostgreSQL
+;HybridBlobConnectionString = Host=127.0.0.1;Port=5432;Database=opensim;Username=opensim;Password=change-me;sslmode=prefer;
+
 ; Nach erfolgreicher Migration:
 ;FallbackReadEnabled = false
 ;ReadThroughMigrationEnabled = false
