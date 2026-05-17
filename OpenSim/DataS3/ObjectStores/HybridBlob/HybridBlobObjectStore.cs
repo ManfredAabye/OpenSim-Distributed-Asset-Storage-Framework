@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
@@ -15,13 +17,23 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
     /// </summary>
     public sealed class HybridBlobObjectStore : IObjectStore, IDisposable
     {
+        private const long DefaultGroupSizeBytes = 2L * 1024L * 1024L * 1024L;
+        private const string GroupStorageModeValue = "grouped";
+        private const string InternalStorageModeKey = "__hb_storage_mode";
+        private const string InternalGroupFileKey = "__hb_group_file";
+        private const string InternalOffsetKey = "__hb_offset";
+        private const string InternalLengthKey = "__hb_length";
+
         private readonly string _storagePath;
         private readonly string _databaseType;
         private readonly string _connectionString;
         private readonly string? _tableName;
         private readonly bool _autoCreatePath;
+        private readonly bool _groupedStorageEnabled;
+        private readonly long _groupSizeBytes;
         private IMetadataBackend? _metadataBackend;
         private readonly object _initSync = new object();
+        private readonly SemaphoreSlim _groupWriteSemaphore = new SemaphoreSlim(1, 1);
         private bool _initialized;
         private Exception? _initializationException;
         private bool _disposed;
@@ -34,6 +46,7 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
         /// - ConnectionString: fallback to OpenSim/global DB connection string
         /// - HybridBlobTableName: metadata table name (default: blob_metadata)
         /// - HybridBlobAutoCreatePath: create directories if missing (default: true)
+        /// - HybridBlobGroupSizeBytes: max size per grouped pack file before rotation (default: 2147483648 / 2GB)
         /// 
         /// Examples:
         /// SQLite: HybridBlobStoragePath=/data/blobs;HybridBlobDatabaseType=SQLite
@@ -48,6 +61,17 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
             _databaseType = settings["HybridBlobDatabaseType"] ?? "SQLite";
             _tableName = settings.GetValueOrDefault("HybridBlobTableName");
             _autoCreatePath = bool.TryParse(settings.GetValueOrDefault("HybridBlobAutoCreatePath"), out var val) ? val : true;
+            _groupedStorageEnabled = true;
+
+            if (long.TryParse(settings.GetValueOrDefault("HybridBlobGroupSizeBytes"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var groupSize)
+                && groupSize > 0)
+            {
+                _groupSizeBytes = groupSize;
+            }
+            else
+            {
+                _groupSizeBytes = DefaultGroupSizeBytes;
+            }
 
             _connectionString = ResolveMetadataConnectionString(connectionString, settings, _databaseType, _storagePath);
         }
@@ -109,6 +133,37 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
             cancellationToken.ThrowIfCancellationRequested();
             EnsureInitialized();
 
+            BlobMetadata? blobMeta = await _metadataBackend!.GetMetadataAsync(key, cancellationToken).ConfigureAwait(false);
+            if (blobMeta == null)
+                throw new FileNotFoundException($"Blob metadata not found: {key}");
+
+            if (TryGetGroupedLocation(blobMeta, out var groupFilePath, out var offset, out var length))
+            {
+                if (!File.Exists(groupFilePath))
+                    throw new FileNotFoundException($"Grouped blob file not found: {key}", groupFilePath);
+
+                var msGrouped = new MemoryStream();
+                try
+                {
+                    using (FileStream groupedFs = new FileStream(groupFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        if (offset < 0 || length < 0 || groupedFs.Length < offset + length)
+                            throw new IOException($"Grouped blob range is invalid for key: {key}");
+
+                        groupedFs.Seek(offset, SeekOrigin.Begin);
+                        await CopyExactBytesAsync(groupedFs, msGrouped, length, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    msGrouped.Position = 0;
+                    return msGrouped;
+                }
+                catch
+                {
+                    msGrouped.Dispose();
+                    throw;
+                }
+            }
+
             string filePath = GetFilePath(key);
 
             if (!File.Exists(filePath))
@@ -141,6 +196,12 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
         {
             cancellationToken.ThrowIfCancellationRequested();
             EnsureInitialized();
+
+            if (_groupedStorageEnabled)
+            {
+                await PutGroupedAsync(key, data, metadata, cancellationToken).ConfigureAwait(false);
+                return;
+            }
 
             string filePath = GetFilePath(key);
             string? directory = Path.GetDirectoryName(filePath);
@@ -195,6 +256,14 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
             cancellationToken.ThrowIfCancellationRequested();
             EnsureInitialized();
 
+            BlobMetadata? blobMeta = await _metadataBackend!.GetMetadataAsync(key, cancellationToken).ConfigureAwait(false);
+            if (blobMeta != null && TryGetGroupedLocation(blobMeta, out _, out _, out _))
+            {
+                // Grouped storage is append-only; deleting an individual blob means removing metadata only.
+                await _metadataBackend.DeleteMetadataAsync(key, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
             string filePath = GetFilePath(key);
 
             if (File.Exists(filePath))
@@ -234,12 +303,21 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
             cancellationToken.ThrowIfCancellationRequested();
             EnsureInitialized();
 
-            string filePath = GetFilePath(key);
-            bool fileExists = File.Exists(filePath);
-            bool metadataExists = await _metadataBackend!.MetadataExistsAsync(key, cancellationToken).ConfigureAwait(false);
+            BlobMetadata? blobMeta = await _metadataBackend!.GetMetadataAsync(key, cancellationToken).ConfigureAwait(false);
+            if (blobMeta == null)
+                return false;
 
-            // Both should be in sync, but trust filesystem
-            return fileExists;
+            if (TryGetGroupedLocation(blobMeta, out var groupFilePath, out var offset, out var length))
+            {
+                if (!File.Exists(groupFilePath))
+                    return false;
+
+                var info = new FileInfo(groupFilePath);
+                return offset >= 0 && length >= 0 && info.Length >= offset + length;
+            }
+
+            string filePath = GetFilePath(key);
+            return File.Exists(filePath);
         }
 
         /// <inheritdoc />
@@ -251,6 +329,23 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
             BlobMetadata? blobMeta = await _metadataBackend!.GetMetadataAsync(key, cancellationToken).ConfigureAwait(false);
             if (blobMeta == null)
                 throw new FileNotFoundException($"Blob metadata not found: {key}");
+
+            if (TryGetGroupedLocation(blobMeta, out var groupFilePath, out var offset, out var length))
+            {
+                if (!File.Exists(groupFilePath))
+                    throw new FileNotFoundException($"Grouped blob file not found: {key}", groupFilePath);
+
+                var info = new FileInfo(groupFilePath);
+                if (offset < 0 || length < 0 || info.Length < offset + length)
+                    throw new IOException($"Grouped blob range is invalid for key: {key}");
+
+                return new ObjectStat
+                {
+                    SizeBytes = blobMeta.SizeBytes,
+                    ETag = blobMeta.ETag,
+                    ContentType = blobMeta.ContentType
+                };
+            }
 
             string filePath = GetFilePath(key);
             if (!File.Exists(filePath))
@@ -277,6 +372,196 @@ namespace OpenSim.DataS3.ObjectStores.HybridBlob
             // Shard by first 2 chars for directory distribution
             string shard = key.Substring(0, 2);
             return Path.Combine(_storagePath, shard, key + ".blob");
+        }
+
+        private async Task PutGroupedAsync(
+            string key,
+            Stream data,
+            IReadOnlyDictionary<string, string>? metadata,
+            CancellationToken cancellationToken)
+        {
+            await _groupWriteSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                string groupsDir = GetGroupsDirectory();
+                if (!Directory.Exists(groupsDir))
+                {
+                    if (_autoCreatePath)
+                        Directory.CreateDirectory(groupsDir);
+                    else
+                        throw new DirectoryNotFoundException($"Directory does not exist: {groupsDir}");
+                }
+
+                long expectedLength = data.CanSeek ? Math.Max(0, data.Length - data.Position) : -1;
+                string groupFilePath = SelectGroupFileForAppend(groupsDir, expectedLength);
+
+                string etag;
+                long sizeBytes;
+                long offset;
+
+                using (FileStream fs = new FileStream(groupFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read))
+                {
+                    fs.Seek(0, SeekOrigin.End);
+                    offset = fs.Position;
+
+                    using (var sha256 = SHA256.Create())
+                    {
+                        using (var hashStream = new CryptoStream(fs, sha256, CryptoStreamMode.Write, leaveOpen: true))
+                        {
+                            await data.CopyToAsync(hashStream, 81920, cancellationToken).ConfigureAwait(false);
+                        }
+
+                        sizeBytes = fs.Position - offset;
+                        etag = "\"" + BitConverter.ToString(sha256.Hash!).Replace("-", "").ToLowerInvariant() + "\"";
+                    }
+                }
+
+                string contentType = ExtractMetadataValue(metadata, "Content-Type") ?? "application/octet-stream";
+                var now = DateTimeOffset.UtcNow;
+                string relativeGroupFile = Path.GetRelativePath(_storagePath, groupFilePath);
+
+                var blobMeta = new BlobMetadata
+                {
+                    Key = key,
+                    ETag = etag,
+                    SizeBytes = sizeBytes,
+                    ContentType = contentType,
+                    CreatedUtc = now,
+                    ModifiedUtc = now,
+                    CustomMetadata = SerializeMetadata(MergeStorageMetadata(metadata, relativeGroupFile, offset, sizeBytes))
+                };
+
+                await _metadataBackend!.UpsertMetadataAsync(blobMeta, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                _groupWriteSemaphore.Release();
+            }
+        }
+
+        private string GetGroupsDirectory()
+        {
+            return Path.Combine(_storagePath, "groups");
+        }
+
+        private string SelectGroupFileForAppend(string groupsDir, long expectedLength)
+        {
+            var candidates = Directory.GetFiles(groupsDir, "group-*.pack")
+                .OrderBy(f => f, StringComparer.Ordinal)
+                .ToList();
+
+            if (candidates.Count == 0)
+                return CreateNewGroupFilePath(groupsDir);
+
+            string current = candidates[candidates.Count - 1];
+            long currentLength = new FileInfo(current).Length;
+
+            if (currentLength >= _groupSizeBytes)
+                return CreateNewGroupFilePath(groupsDir);
+
+            if (expectedLength >= 0 && currentLength + expectedLength > _groupSizeBytes)
+                return CreateNewGroupFilePath(groupsDir);
+
+            return current;
+        }
+
+        private string CreateNewGroupFilePath(string groupsDir)
+        {
+            string fileName = "group-" + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff", CultureInfo.InvariantCulture) + "-"
+                + Guid.NewGuid().ToString("N") + ".pack";
+            return Path.Combine(groupsDir, fileName);
+        }
+
+        private bool TryGetGroupedLocation(BlobMetadata blobMeta, out string groupFilePath, out long offset, out long length)
+        {
+            groupFilePath = string.Empty;
+            offset = 0;
+            length = 0;
+
+            var parsed = DeserializeMetadata(blobMeta.CustomMetadata);
+            if (!parsed.TryGetValue(InternalStorageModeKey, out var storageMode)
+                || !string.Equals(storageMode, GroupStorageModeValue, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (!parsed.TryGetValue(InternalGroupFileKey, out var relative)
+                || string.IsNullOrWhiteSpace(relative))
+            {
+                return false;
+            }
+
+            if (!parsed.TryGetValue(InternalOffsetKey, out var offsetStr)
+                || !long.TryParse(offsetStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out offset))
+            {
+                return false;
+            }
+
+            if (!parsed.TryGetValue(InternalLengthKey, out var lengthStr)
+                || !long.TryParse(lengthStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out length))
+            {
+                return false;
+            }
+
+            groupFilePath = Path.Combine(_storagePath, relative);
+            return true;
+        }
+
+        private static Dictionary<string, string> MergeStorageMetadata(
+            IReadOnlyDictionary<string, string>? metadata,
+            string relativeGroupFile,
+            long offset,
+            long length)
+        {
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            if (metadata != null)
+            {
+                foreach (var kv in metadata)
+                    result[kv.Key] = kv.Value;
+            }
+
+            result[InternalStorageModeKey] = GroupStorageModeValue;
+            result[InternalGroupFileKey] = relativeGroupFile;
+            result[InternalOffsetKey] = offset.ToString(CultureInfo.InvariantCulture);
+            result[InternalLengthKey] = length.ToString(CultureInfo.InvariantCulture);
+
+            return result;
+        }
+
+        private static Dictionary<string, string> DeserializeMetadata(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                return parsed ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
+        private static async Task CopyExactBytesAsync(Stream source, Stream destination, long bytesToCopy, CancellationToken cancellationToken)
+        {
+            byte[] buffer = new byte[81920];
+            long remaining = bytesToCopy;
+
+            while (remaining > 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                int requested = (int)Math.Min(buffer.Length, remaining);
+                int read = await source.ReadAsync(buffer, 0, requested, cancellationToken).ConfigureAwait(false);
+                if (read <= 0)
+                    throw new EndOfStreamException("Unexpected end of stream while reading grouped blob segment.");
+
+                await destination.WriteAsync(buffer, 0, read, cancellationToken).ConfigureAwait(false);
+                remaining -= read;
+            }
         }
 
         /// <summary>
